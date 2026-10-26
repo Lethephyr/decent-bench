@@ -144,6 +144,12 @@ class NIMDatasetHandler(DatasetHandler):
     def get_partitions(self) -> Sequence[Dataset]:  # noqa: D102
         return self._partitions
 
+    def split(self, partitions: Sequence[Sequence[int]]) -> list[Dataset]:
+        """Materialize index partitions from the flattened spatial partitions."""
+        indices = self._resolve_partitions(partitions)
+        datapoints = self.get_datapoints()
+        return [[datapoints[index] for index in partition] for partition in indices]
+
     def get_test_set(self, label_balance: float | None = None, num_samples: int | None = None) -> Dataset:
         """Return occupancy grid as the test set."""
         image = Image.open(self.image_file).convert("L")

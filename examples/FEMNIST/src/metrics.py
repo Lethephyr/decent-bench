@@ -51,15 +51,15 @@ class BalancedAccuracy(Metric):
     def is_available(  # noqa: D102
         self,
         problem: BenchmarkProblem,
-    ) -> tuple[bool, str | None]:
+    ) -> str | None:
         if getattr(problem, "test_data", None) is None:
-            return False, "requires problem.test_data"
+            return "requires problem.test_data"
         if not all(isinstance(a.cost, EmpiricalRiskCost) for a in problem.network.agents()):
-            return False, "balanced accuracy only applies if all agents have EmpiricalRiskCost"
+            return "balanced accuracy only applies if all agents have EmpiricalRiskCost"
         _, test_y = _split_xy(problem.test_data)
         if test_y.dtype.kind not in {"i", "u"}:
-            return False, f"balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
-        return True, None
+            return f"balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
+        return None
 
     def compute(  # noqa: D102
         self,
@@ -91,17 +91,17 @@ class ServerBalancedAccuracy(Metric):
     def is_available(  # noqa: D102
         self,
         problem: BenchmarkProblem,
-    ) -> tuple[bool, str | None]:
+    ) -> str | None:
         if not isinstance(problem.network, FedNetwork):
-            return False, "server balanced accuracy only applies to FedNetwork"
+            return "server balanced accuracy only applies to FedNetwork"
         if getattr(problem, "test_data", None) is None:
-            return False, "requires problem.test_data"
+            return "requires problem.test_data"
         if not all(isinstance(a.cost, EmpiricalRiskCost) for a in problem.network.agents()):
-            return False, "server balanced accuracy only applies if all clients have EmpiricalRiskCost"
+            return "server balanced accuracy only applies if all clients have EmpiricalRiskCost"
         _, test_y = _split_xy(problem.test_data)
         if test_y.dtype.kind not in {"i", "u"}:
-            return False, f"server balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
-        return True, None
+            return f"server balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
+        return None
 
     def compute(  # noqa: D102
         self,

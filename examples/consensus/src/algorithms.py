@@ -86,4 +86,6 @@ class RatioConsensus(P2PAlgorithm):
                 for j, z_j in i.messages(channel=Z_UPDATE).items():
                     z_avg += self.W[i, j] * z_j
 
+            i.aux_vars["y"] = y_avg
+            i.aux_vars["z"] = z_avg
             i.x = y_avg / z_avg

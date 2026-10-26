@@ -95,7 +95,7 @@ def visualize_nim_dataset(  # noqa: PLR0914
             ax.axvline(x=x_pos + leakage, color="red", linestyle=":", alpha=0.3)
 
     # Generate distinct colors for each partition
-    colors = plt.cm.get_cmap("tab20")(np.linspace(0, 1, nim_data.n_partitions))
+    colors = plt.get_cmap("tab20")(np.linspace(0, 1, nim_data.n_partitions))
 
     # Plot sampled points from each partition
     for i, partition_data in enumerate(nim_data.get_partitions()):

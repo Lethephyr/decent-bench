@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 from PIL import Image
 from torch import nn
 
+from decent_array import interoperability as iop
 from decent_bench import benchmark
 from decent_bench.costs import PyTorchCost
 from decent_bench.networks import Network
@@ -71,15 +72,18 @@ def create_heatmap_plots(
         X, Y = np.meshgrid(xs, ys, indexing="xy")  # noqa: N806
         nx, ny = X.shape
         points = np.column_stack((X.ravel(), Y.ravel()))
+        inputs = list(torch.tensor(points, dtype=torch.float32).unbind())
         mats = []
         for agent in network.agents():
             if not isinstance(agent.cost, PyTorchCost):
                 continue
             agent_activation = agent.cost.final_activation
             agent.cost.final_activation = nn.Sigmoid()
-            out = agent.cost.predict(agent.x, torch.tensor(points, dtype=torch.float32))  # type: ignore[arg-type]
-            agent.cost.final_activation = agent_activation
-            out_np = np.array(out)
+            try:
+                out = agent.cost.predict(agent.x, inputs)
+            finally:
+                agent.cost.final_activation = agent_activation
+            out_np = iop.to_numpy(out)
 
             mats.append(out_np.reshape((nx, ny)))
 
@@ -89,12 +93,17 @@ def create_heatmap_plots(
     image_array = np.array(image)
     height, width = image_array.shape
     feature_norm = max(height, width)
+    if save_path is not None:
+        save_path.mkdir(parents=True, exist_ok=True)
 
     figs = []
     for alg, networks in result.states.items():
         for j, n in enumerate(networks):
             heatmaps = heatmap_plot(n, width, height, feature_norm)
-            fig, ax = plt.subplots(1, 5, figsize=(15, 10))
+            if not heatmaps:
+                continue
+            fig, axes = plt.subplots(1, len(heatmaps), figsize=(3 * len(heatmaps), 10), squeeze=False)
+            ax = axes[0]
             fig.suptitle(f"{alg.name} - Trial {j + 1}")
             for i, hm in enumerate(heatmaps):
                 ax[i].imshow(image_array, cmap="gray")

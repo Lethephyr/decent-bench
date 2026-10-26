@@ -221,6 +221,12 @@ class FEMNISTDatasetHandler(DatasetHandler):
             self._partitions = [self._build_writer_partition(writer_id) for writer_id in self.selected_writer_ids]
         return self._partitions
 
+    def split(self, partitions: Sequence[Sequence[int]]) -> list[Dataset]:
+        """Materialize index partitions from the selected writers and train/test split."""
+        indices = self._resolve_partitions(partitions)
+        datapoints = self.get_datapoints()
+        return [[datapoints[index] for index in partition] for partition in indices]
+
     def _build_writer_partition(self, writer_id: str) -> Dataset:
         writer_rows = self._split_rows_for_writer(writer_id)
         return [self._row_to_datapoint(int(row_index)) for row_index in writer_rows["row_index"].to_list()]
