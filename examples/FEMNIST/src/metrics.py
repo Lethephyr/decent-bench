@@ -1,4 +1,5 @@
-"""Custom metrics for the FEMNIST example.
+"""
+Custom metrics for the FEMNIST example.
 
 This module shows how to define custom metrics that can be passed to
 ``benchmark.compute_metrics``. The two metrics here compute balanced accuracy —
@@ -14,9 +15,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from decent_array import Array
+from decent_array import interoperability as iop
 from sklearn import metrics as sk_metrics
 
-from decent_array import interoperability as iop
 from decent_bench.costs import EmpiricalRiskCost
 from decent_bench.metrics import Metric, NetworkMetricsView
 from decent_bench.networks import FedNetwork
@@ -30,7 +32,7 @@ def _split_xy(data: list[Any]) -> tuple[tuple[Any, ...], np.ndarray]:
     return tuple(x), np.array(y)
 
 
-def _predict(cost: EmpiricalRiskCost, x: Any, test_x: tuple[Any, ...]) -> np.ndarray:
+def _predict(cost: EmpiricalRiskCost, x: Array, test_x: tuple[Any, ...]) -> np.ndarray:
     return iop.to_numpy(cost.predict(x, list(test_x)))
 
 

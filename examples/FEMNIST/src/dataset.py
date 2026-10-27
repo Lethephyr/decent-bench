@@ -157,7 +157,7 @@ class FEMNISTDatasetHandler(DatasetHandler):
         if max_samples_per_client is not None and max_samples_per_client <= 0:
             raise ValueError(f"max_samples_per_client must be positive, got {max_samples_per_client}")
 
-        self.split = split
+        self._split = split
         self.dataset_name = dataset_name
         self.cache_dir = Path(cache_dir) if cache_dir is not None else None
         self.requested_n_clients = n_clients
@@ -233,7 +233,7 @@ class FEMNISTDatasetHandler(DatasetHandler):
 
     def _split_rows_for_writer(self, writer_id: str) -> pd.DataFrame:
         writer_rows = self.metadata[
-            (self.metadata["writer_id"] == writer_id) & (self.metadata["split"] == self.split)
+            (self.metadata["writer_id"] == writer_id) & (self.metadata["split"] == self._split)
         ].sort_values("row_index")
 
         if self.max_samples_per_client is not None:

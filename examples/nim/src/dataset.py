@@ -113,7 +113,7 @@ class NIMDatasetHandler(DatasetHandler):
 
     @property
     def n_samples(self) -> int:  # noqa: D102
-        return len(self.get_datapoints())
+        return sum(len(partition) for partition in self._partitions)
 
     @property
     def n_partitions(self) -> int:  # noqa: D102
@@ -330,9 +330,11 @@ class NIMDatasetHandler(DatasetHandler):
         for partition in partitions:
             transformed_partition = []
             for feature, label in partition:
-                transformed_partition.append((
-                    self._feature_transform(feature) / self._feature_norm,
-                    self._target_transform(label),
-                ))
+                transformed_partition.append(
+                    (
+                        self._feature_transform(feature) / self._feature_norm,
+                        self._target_transform(label),
+                    )
+                )
             transformed_partitions.append(cast("Dataset", transformed_partition))
         return transformed_partitions

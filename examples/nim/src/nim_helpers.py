@@ -1,13 +1,15 @@
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from decent_array import interoperability as iop
 from matplotlib.figure import Figure
+from numpy.typing import NDArray
 from PIL import Image
 from torch import nn
 
-from decent_array import interoperability as iop
 from decent_bench import benchmark
 from decent_bench.costs import PyTorchCost
 from decent_bench.networks import Network
@@ -60,59 +62,51 @@ def create_heatmap_plots(
     save_path: Path | None = None,
 ) -> list[Figure]:
     """Create heatmap plots for each agent in the networks."""
-
-    def heatmap_plot(
-        network: Network,
-        width: int,
-        height: int,
-        norm: float,
-    ) -> list[np.ndarray]:
-        xs = np.arange(0, width) / norm
-        ys = np.arange(0, height) / norm
-        X, Y = np.meshgrid(xs, ys, indexing="xy")  # noqa: N806
-        nx, ny = X.shape
-        points = np.column_stack((X.ravel(), Y.ravel()))
-        inputs = list(torch.tensor(points, dtype=torch.float32).unbind())
-        mats = []
-        for agent in network.agents():
-            if not isinstance(agent.cost, PyTorchCost):
-                continue
-            agent_activation = agent.cost.final_activation
-            agent.cost.final_activation = nn.Sigmoid()
-            try:
-                out = agent.cost.predict(agent.x, inputs)
-            finally:
-                agent.cost.final_activation = agent_activation
-            out_np = iop.to_numpy(out)
-
-            mats.append(out_np.reshape((nx, ny)))
-
-        return mats
-
-    image = Image.open(image_file).convert("L")
-    image_array = np.array(image)
+    with Image.open(image_file) as image:
+        image_array = np.array(image.convert("L"))
     height, width = image_array.shape
     feature_norm = max(height, width)
+    xs = np.arange(width) / feature_norm
+    ys = np.arange(height) / feature_norm
+    grid_x, grid_y = np.meshgrid(xs, ys, indexing="xy")
+    points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
+    inputs = list(torch.tensor(points, dtype=torch.float32).unbind())
+
     if save_path is not None:
         save_path.mkdir(parents=True, exist_ok=True)
 
+    def predict_heatmaps(network: Network) -> list[NDArray[Any]]:
+        heatmaps = []
+        for agent in network.agents():
+            if not isinstance(agent.cost, PyTorchCost):
+                continue
+            original_activation = agent.cost.final_activation
+            agent.cost.final_activation = nn.Sigmoid()
+            try:
+                predictions = agent.cost.predict(agent.x, inputs)
+            finally:
+                agent.cost.final_activation = original_activation
+            heatmaps.append(iop.to_numpy(predictions).reshape((height, width)))
+
+        return heatmaps
+
     figs = []
     for alg, networks in result.states.items():
-        for j, n in enumerate(networks):
-            heatmaps = heatmap_plot(n, width, height, feature_norm)
+        for trial_index, network in enumerate(networks, start=1):
+            heatmaps = predict_heatmaps(network)
             if not heatmaps:
                 continue
             fig, axes = plt.subplots(1, len(heatmaps), figsize=(3 * len(heatmaps), 10), squeeze=False)
             ax = axes[0]
-            fig.suptitle(f"{alg.name} - Trial {j + 1}")
-            for i, hm in enumerate(heatmaps):
-                ax[i].imshow(image_array, cmap="gray")
-                ax[i].imshow(hm, cmap="hot", interpolation="nearest", vmin=0, vmax=1, alpha=0.8)
-                ax[i].invert_yaxis()
-                ax[i].axis("off")
-                ax[i].set_title(f"Agent {i + 1}")
-            plt.tight_layout()
+            fig.suptitle(f"{alg.name} - Trial {trial_index}")
+            for agent_index, (axis, heatmap) in enumerate(zip(ax, heatmaps, strict=True), start=1):
+                axis.imshow(image_array, cmap="gray")
+                axis.imshow(heatmap, cmap="hot", interpolation="nearest", vmin=0, vmax=1, alpha=0.8)
+                axis.invert_yaxis()
+                axis.axis("off")
+                axis.set_title(f"Agent {agent_index}")
+            fig.tight_layout()
             if save_path is not None:
-                plt.savefig(save_path / f"heatmaps_{alg.name}_{j + 1}.png")
+                fig.savefig(save_path / f"heatmaps_{alg.name}_{trial_index}.png")
             figs.append(fig)
     return figs
