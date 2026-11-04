@@ -51,6 +51,7 @@ def _clear_caches() -> None:
     """Clear module-level functools caches used by metric utilities."""
     x_mean.cache_clear()
     _predict.cache_clear()
+    _test_targets.cache_clear()
 
 
 @lru_cache(maxsize=CACHE_MAX_SIZE)
@@ -80,6 +81,7 @@ def _predict(agent: AgentMetricsView, iteration: int, problem: "BenchmarkProblem
 
 
 ###### regression and classification metrics
+@lru_cache(maxsize=CACHE_MAX_SIZE)
 def _test_targets(problem: "BenchmarkProblem") -> Array:
     """Stack wrapped or backend-native test targets."""
     targets = [y if isinstance(y, Array) else Array(y) for _, y in problem.test_data]  # type: ignore[union-attr]

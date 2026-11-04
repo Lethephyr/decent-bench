@@ -113,7 +113,7 @@ def compute_metrics(
     # 2) compute table and plot metrics
     network_views: dict[Algorithm[Network], list[NetworkMetricsView]] = {}
     for alg, networks in benchmark_result.states.items():
-        network_views[alg] = [nw.metrics_view() for nw in networks]
+        network_views[alg] = [NetworkMetricsView.from_network(nw) for nw in networks]
 
     iterations = _all_iterations(network_views)
 

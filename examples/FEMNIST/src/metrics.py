@@ -12,6 +12,7 @@ interface.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -27,14 +28,14 @@ if TYPE_CHECKING:
     from decent_bench.benchmark import BenchmarkProblem
 
 
-def _split_xy(data: list[Any]) -> tuple[tuple[Any, ...], np.ndarray]:
+def _split_xy(data: Sequence[Any]) -> tuple[list[Any], np.ndarray]:
     x, y = zip(*data, strict=True)
     targets = iop.stack([target if isinstance(target, Array) else Array(target) for target in y])
-    return tuple(x), iop.to_numpy(targets)
+    return list(x), iop.to_numpy(targets)
 
 
-def _predict(cost: EmpiricalRiskCost, x: Array, test_x: tuple[Any, ...]) -> np.ndarray:
-    return iop.to_numpy(cost.predict(x, list(test_x)))
+def _predict(cost: EmpiricalRiskCost, x: Array, test_x: list[Any]) -> np.ndarray:
+    return iop.to_numpy(cost.predict(x, test_x))
 
 
 class BalancedAccuracy(Metric):
@@ -55,11 +56,12 @@ class BalancedAccuracy(Metric):
         self,
         problem: BenchmarkProblem,
     ) -> str | None:
-        if getattr(problem, "test_data", None) is None:
+        test_data = getattr(problem, "test_data", None)
+        if test_data is None:
             return "requires problem.test_data"
         if not all(isinstance(a.cost, EmpiricalRiskCost) for a in problem.network.agents()):
             return "balanced accuracy only applies if all agents have EmpiricalRiskCost"
-        _, test_y = _split_xy(problem.test_data)
+        _, test_y = _split_xy(test_data)
         if test_y.dtype.kind not in {"i", "u"}:
             return f"balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
         return None
@@ -70,9 +72,13 @@ class BalancedAccuracy(Metric):
         problem: BenchmarkProblem,
         iteration: int,
     ) -> list[float]:
+        if problem.test_data is None:
+            raise ValueError("balanced accuracy requires problem.test_data")
         test_x, test_y = _split_xy(problem.test_data)
         results: list[float] = []
         for agent in network.agents():
+            if not isinstance(agent.cost, EmpiricalRiskCost):
+                raise TypeError("balanced accuracy requires EmpiricalRiskCost")
             preds = _predict(agent.cost, agent.x_history[iteration], test_x)
             if np.any(~np.isfinite(preds)):
                 return [np.nan] * len(network.agents())
@@ -97,11 +103,12 @@ class ServerBalancedAccuracy(Metric):
     ) -> str | None:
         if not isinstance(problem.network, FedNetwork):
             return "server balanced accuracy only applies to FedNetwork"
-        if getattr(problem, "test_data", None) is None:
+        test_data = getattr(problem, "test_data", None)
+        if test_data is None:
             return "requires problem.test_data"
         if not all(isinstance(a.cost, EmpiricalRiskCost) for a in problem.network.agents()):
             return "server balanced accuracy only applies if all clients have EmpiricalRiskCost"
-        _, test_y = _split_xy(problem.test_data)
+        _, test_y = _split_xy(test_data)
         if test_y.dtype.kind not in {"i", "u"}:
             return f"server balanced accuracy only applies for integer targets, got dtype {test_y.dtype}"
         return None
@@ -112,10 +119,14 @@ class ServerBalancedAccuracy(Metric):
         problem: BenchmarkProblem,
         iteration: int,
     ) -> list[float]:
+        if problem.test_data is None:
+            raise ValueError("server balanced accuracy requires problem.test_data")
         client_views = network.agents()
         if not client_views:
             raise ValueError("server balanced accuracy requires at least one client")
         cost = client_views[0].cost
+        if not isinstance(cost, EmpiricalRiskCost):
+            raise TypeError("server balanced accuracy requires EmpiricalRiskCost")
         test_x, test_y = _split_xy(problem.test_data)
         preds = _predict(cost, network.server().x_history[iteration], test_x)
         if np.any(~np.isfinite(preds)):

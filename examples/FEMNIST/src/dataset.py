@@ -205,7 +205,7 @@ class FEMNISTDatasetHandler(DatasetHandler):
     @cached_property
     def hf_dataset(self) -> Any:  # noqa: ANN401
         """Return the underlying Hugging Face dataset."""
-        from datasets import load_dataset  # type: ignore[import-untyped]  # noqa: PLC0415
+        from datasets import load_dataset  # noqa: PLC0415
 
         return load_dataset(
             self.dataset_name,
@@ -229,7 +229,10 @@ class FEMNISTDatasetHandler(DatasetHandler):
 
     def _build_writer_partition(self, writer_id: str) -> Dataset:
         writer_rows = self._split_rows_for_writer(writer_id)
-        return [self._row_to_datapoint(int(row_index)) for row_index in writer_rows["row_index"].to_list()]
+        return cast(
+            "Dataset",
+            [self._row_to_datapoint(int(row_index)) for row_index in writer_rows["row_index"].to_list()],
+        )
 
     def _split_rows_for_writer(self, writer_id: str) -> pd.DataFrame:
         writer_rows = self.metadata[

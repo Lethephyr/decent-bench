@@ -83,7 +83,7 @@ def create_heatmap_plots(
             original_activation = agent.cost.final_activation
             agent.cost.final_activation = nn.Sigmoid()
             try:
-                predictions = agent.cost.predict(agent.x, inputs)
+                predictions = agent.cost.predict(agent.x, inputs)  # type: ignore[arg-type]
             finally:
                 agent.cost.final_activation = original_activation
             heatmaps.append(iop.to_numpy(predictions).reshape((height, width)))

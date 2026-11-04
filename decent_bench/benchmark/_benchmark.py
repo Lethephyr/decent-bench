@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from decent_bench.benchmark._progress_bar import ProgressBarHandle
     from decent_bench.metrics import RuntimeMetric
     from decent_bench.utils._checkpoint_manager import CheckpointManager
+    from decent_bench.utils._logger import LogQueue
 
 
 def _validate_unique_algorithm_names(algorithms: list[Algorithm[Network]]) -> None:
@@ -448,7 +449,7 @@ def _is_multiprocessing_main_guard_error(exc: RuntimeError) -> bool:
     return "start a new process before the" in msg and "bootstrapping phase" in msg
 
 
-def _initialize_worker(logging_queue: Any, config: "Config") -> None:  # noqa: ANN401
+def _initialize_worker(logging_queue: "LogQueue", config: "Config") -> None:
     """Initialize the backend in spawned workers before unpickling trial inputs."""
     from decent_bench.benchmark._configure import configure, get_config  # noqa: PLC0415
 
