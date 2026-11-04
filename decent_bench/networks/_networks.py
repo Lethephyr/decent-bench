@@ -4,7 +4,7 @@ from abc import ABC
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from functools import cached_property
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import networkx as nx
 import numpy as np
@@ -22,6 +22,10 @@ from decent_bench.schemes import (
     NoiseScheme,
     NoNoise,
 )
+
+if TYPE_CHECKING:
+    from decent_bench.algorithms import Algorithm
+    from decent_bench.metrics._metrics_view import NetworkMetricsView
 
 
 class Network(ABC):  # noqa: B024
@@ -127,6 +131,16 @@ class Network(ABC):  # noqa: B024
 
         if any(agent.index != -1 for agent in agents):
             raise ValueError("Agents can only be assigned to one network at a time")
+
+    def validate_algorithm(self, algorithm: Algorithm[Any]) -> None:  # noqa: ARG002
+        """Validate algorithm compatibility before initialization or checkpoint resume."""
+        return
+
+    def metrics_view(self) -> NetworkMetricsView:
+        """Build an evaluation view; extensions may preserve additional temporal data."""
+        from decent_bench.metrics._metrics_view import NetworkMetricsView  # noqa: PLC0415
+
+        return NetworkMetricsView.from_network(self)
 
     def _initialize_message_schemes(
         self,

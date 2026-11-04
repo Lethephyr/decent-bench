@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from multiprocessing.context import SpawnContext
     from multiprocessing.managers import SyncManager
 
+    from decent_bench.benchmark._configure import Config
     from decent_bench.benchmark._progress_bar import ProgressBarHandle
     from decent_bench.metrics import RuntimeMetric
     from decent_bench.utils._checkpoint_manager import CheckpointManager
@@ -447,6 +448,22 @@ def _is_multiprocessing_main_guard_error(exc: RuntimeError) -> bool:
     return "start a new process before the" in msg and "bootstrapping phase" in msg
 
 
+def _initialize_worker(logging_queue: Any, config: "Config") -> None:  # noqa: ANN401
+    """Initialize the backend in spawned workers before unpickling trial inputs."""
+    from decent_bench.benchmark._configure import configure, get_config  # noqa: PLC0415
+
+    try:
+        get_config()
+    except RuntimeError:
+        configure(
+            config.framework,
+            config.device,
+            seed=config.seed,
+            log_level=config.log_level,
+        )
+    _logger.start_queue_logger(logging_queue)
+
+
 def _run_trials(  # noqa: PLR0917
     algorithms: list[Algorithm[Network]],
     iterations: int,
@@ -530,9 +547,11 @@ def _run_trials(  # noqa: PLR0917
                 "Log listener must be initialized for multiprocessing to handle logs from worker processes"
             )
 
+        from decent_bench.benchmark._configure import get_config  # noqa: PLC0415
+
         with ProcessPoolExecutor(
-            initializer=_logger.start_queue_logger,
-            initargs=(log_listener.queue,),
+            initializer=_initialize_worker,
+            initargs=(log_listener.queue, get_config()),
             max_workers=max_processes,
             mp_context=mp_context,
         ) as executor:

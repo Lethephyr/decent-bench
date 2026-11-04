@@ -733,7 +733,7 @@ class CheckpointManager:
                         )
                         continue
 
-                    resulting_network_views[alg] = [NetworkMetricsView.from_network(nw) for nw in networks]
+                    resulting_network_views[alg] = [nw.metrics_view() for nw in networks]
                 metrics_result.network_views = resulting_network_views
             except Exception as e:
                 LOGGER.warning(

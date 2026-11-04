@@ -29,7 +29,8 @@ if TYPE_CHECKING:
 
 def _split_xy(data: list[Any]) -> tuple[tuple[Any, ...], np.ndarray]:
     x, y = zip(*data, strict=True)
-    return tuple(x), np.array(y)
+    targets = iop.stack([target if isinstance(target, Array) else Array(target) for target in y])
+    return tuple(x), iop.to_numpy(targets)
 
 
 def _predict(cost: EmpiricalRiskCost, x: Array, test_x: tuple[Any, ...]) -> np.ndarray:

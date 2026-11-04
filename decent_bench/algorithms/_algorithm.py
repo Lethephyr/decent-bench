@@ -95,6 +95,7 @@ class Algorithm[NetworkT: Network](ABC):
         if start_iteration < 0 or start_iteration > iterations:
             raise ValueError(f"Invalid start_iteration {start_iteration} for algorithm with {iterations} iterations")
 
+        network.validate_algorithm(self)
         if start_iteration == 0:
             self.initialize(network)
 
