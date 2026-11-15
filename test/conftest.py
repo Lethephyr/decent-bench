@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import warnings
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
@@ -35,7 +36,9 @@ def _backend_available(framework: Frameworks, device: Devices) -> tuple[bool, st
             if device is Devices.GPU:
                 return bool(torch.cuda.is_available()), "PyTorch CUDA is unavailable"
             if device is Devices.MPS:
-                return bool(torch.backends.mps.is_available()), "PyTorch MPS is unavailable"
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    return bool(torch.backends.mps.is_available()), "PyTorch MPS is unavailable"
         elif framework is Frameworks.TENSORFLOW:
             import tensorflow as tf
 

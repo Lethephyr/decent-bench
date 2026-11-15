@@ -1,6 +1,7 @@
 import copy
 import pickle  # noqa: S403
 import sys
+import warnings
 from typing import Any
 
 import pytest
@@ -10,7 +11,9 @@ from decent_array.types import Devices, Frameworks
 
 torch = pytest.importorskip("torch")
 CUDA = torch.cuda.is_available()
-MPS = torch.backends.mps.is_available()
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    MPS = bool(torch.backends.mps.is_available())
 pytestmark = pytest.mark.backend_framework(Frameworks.PYTORCH)
 
 

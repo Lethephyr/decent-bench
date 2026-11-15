@@ -3,6 +3,7 @@ from collections.abc import Callable, Sequence
 from functools import lru_cache, reduce
 from typing import TYPE_CHECKING
 
+import decent_array as da
 import numpy as np
 from decent_array import Array
 from decent_array import interoperability as iop
@@ -80,12 +81,30 @@ def _predict(agent: AgentMetricsView, iteration: int, problem: "BenchmarkProblem
     return agent.cost.predict(agent.x_history[iteration], test_x)  # type: ignore[no-any-return,attr-defined]
 
 
+def _all_finite(preds: Array) -> bool:
+    if preds.dtype in dtypes(kind=("real floating", "complex floating")).values():
+        return bool(iop.all(iop.isfinite(preds)))
+    return True
+
+
+def _match_target_shape(preds: Array, targets: Array) -> Array:
+    if preds.ndim == 1 and targets.shape == (preds.shape[0], 1):
+        return iop.squeeze(targets, axis=1)
+    return targets
+
+
 ###### regression and classification metrics
 @lru_cache(maxsize=CACHE_MAX_SIZE)
 def _test_targets(problem: "BenchmarkProblem") -> Array:
-    """Stack wrapped or backend-native test targets."""
-    targets = [y if isinstance(y, Array) else Array(y) for _, y in problem.test_data]  # type: ignore[union-attr]
-    return iop.stack(targets)
+    """
+    Stack test targets into an :class:`~decent_array.Array`.
+
+    ``DatasetHandler`` subclasses yield ``Array`` targets, whereas
+    ``PyTorchDatasetHandler`` preserves native tensors or scalars for
+    ``DataLoader`` compatibility; ``iop.asarray`` is a no-op on ``Array`` and
+    wraps native values once per cached problem.
+    """
+    return iop.stack([iop.asarray(y) for _, y in problem.test_data])  # type: ignore[union-attr]
 
 
 def _mse(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", iteration: int) -> list[float]:
@@ -105,17 +124,23 @@ def _mse(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", iterat
     """
     ret: list[float] = []
     test_y = _test_targets(problem)
+    float_dtype = da.float64 if da.float64.available else da.float32
+    float_dtypes = dtypes(kind=("real floating", "complex floating")).values()
 
     for agent in agents:
         preds = _predict(agent, iteration, problem)
 
-        if not iop.all(iop.isfinite(preds)):
+        if not _all_finite(preds):
             LOGGER.warning(
                 "Predictions contain NaN or Inf values, which are not valid for MSE calculation, returning NaN"
             )
             return [np.nan for _ in agents]
 
-        error = preds - test_y
+        target_y = _match_target_shape(preds, test_y)
+        if preds.dtype not in float_dtypes or target_y.dtype not in float_dtypes:
+            error = iop.astype(preds, float_dtype) - iop.astype(target_y, float_dtype)
+        else:
+            error = preds - target_y
         ret.append(float(iop.mean(error * error)))
 
     return ret
@@ -137,18 +162,21 @@ def _accuracy(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", i
 
     """
     test_y = _test_targets(problem)
+    float_dtype = da.float64 if da.float64.available else da.float32
     ret: list[float] = []
 
     for agent in agents:
         preds = _predict(agent, iteration, problem)
 
-        if not iop.all(iop.isfinite(preds)):
+        if not _all_finite(preds):
             LOGGER.warning(
                 "Predictions contain NaN or Inf values, which are not valid for accuracy calculation, returning NaN"
             )
             return [np.nan for _ in agents]
 
-        ret.append(float(iop.sum(preds == test_y)) / iop.size(test_y))
+        matches = preds == _match_target_shape(preds, test_y)
+        # Cast bool matches explicitly: torch.mean and tf.reduce_mean reject bool dtypes.
+        ret.append(float(iop.mean(iop.astype(matches, float_dtype))))
 
     return ret
 
@@ -175,7 +203,7 @@ def _precision(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", 
     for agent in agents:
         preds = _predict(agent, iteration, problem)
 
-        if not iop.all(iop.isfinite(preds)):
+        if not _all_finite(preds):
             LOGGER.warning(
                 "Predictions contain NaN or Inf values, which are not valid for precision calculation, returning NaN"
             )
@@ -208,7 +236,7 @@ def _recall(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", ite
     for agent in agents:
         preds = _predict(agent, iteration, problem)
 
-        if not iop.all(iop.isfinite(preds)):
+        if not _all_finite(preds):
             LOGGER.warning(
                 "Predictions contain NaN or Inf values, which are not valid for recall calculation, returning NaN"
             )
@@ -227,7 +255,7 @@ def _requires_x_optimal(problem: "BenchmarkProblem") -> str | None:
 
 
 def _requires_test_data(problem: "BenchmarkProblem") -> str | None:
-    if getattr(problem, "test_data", None) is None:
+    if not getattr(problem, "test_data", None):
         return "requires problem.test_data"
     return None
 
@@ -243,11 +271,13 @@ def _requires_integer_targets(problem: "BenchmarkProblem") -> str | None:
     if reason is not None:
         return reason
 
-    int_dtypes = dtypes(kind=("signed integer", "unsigned integer")).values()
-    for d in problem.test_data:  # type: ignore[union-attr]
-        target = d[1] if isinstance(d[1], Array) else Array(d[1])
-        if target.dtype not in int_dtypes:
-            return f"requires integer targets, dtype {target.dtype} found"
+    try:
+        targets = _test_targets(problem)
+    except TypeError:
+        targets = iop.stack([iop.asarray(y) for _, y in problem.test_data])  # type: ignore[union-attr]
+
+    if targets.dtype not in dtypes(kind=("signed integer", "unsigned integer")).values():
+        return f"requires integer targets, dtype {targets.dtype} found"
     return None
 
 
