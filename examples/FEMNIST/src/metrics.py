@@ -12,8 +12,7 @@ interface.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 from decent_array import Array
@@ -23,18 +22,18 @@ from sklearn import metrics as sk_metrics
 from decent_bench.costs import EmpiricalRiskCost
 from decent_bench.metrics import Metric, NetworkMetricsView
 from decent_bench.networks import FedNetwork
+from decent_bench.utils.types import Dataset
 
 if TYPE_CHECKING:
     from decent_bench.benchmark import BenchmarkProblem
 
 
-def _split_xy(data: Sequence[Any]) -> tuple[list[Any], np.ndarray]:
+def _split_xy(data: Dataset) -> tuple[list[Array], np.ndarray]:
     x, y = zip(*data, strict=True)
-    targets = iop.stack([target if isinstance(target, Array) else Array(target) for target in y])
-    return list(x), iop.to_numpy(targets)
+    return list(x), iop.to_numpy(iop.stack(y))
 
 
-def _predict(cost: EmpiricalRiskCost, x: Array, test_x: list[Any]) -> np.ndarray:
+def _predict(cost: EmpiricalRiskCost, x: Array, test_x: list[Array]) -> np.ndarray:
     return iop.to_numpy(cost.predict(x, test_x))
 
 

@@ -4,6 +4,7 @@ from collections.abc import Sequence
 import numpy as np
 import pytest
 
+from decent_array import Array
 from decent_array import interoperability as iop
 from decent_bench.datasets import (
     DatasetHandler,
@@ -345,5 +346,8 @@ def test_pytorch_handler_materializes_partitions_as_subsets() -> None:
 
     assert [len(partition) for partition in partitions] == [3, 3]
     for partition in partitions:
-        labels = {label for _, label in partition}
+        for feature, label in partition:
+            assert isinstance(feature, Array)
+            assert isinstance(label, Array)
+        labels = {int(label) for _, label in partition}
         assert len(labels) == 1

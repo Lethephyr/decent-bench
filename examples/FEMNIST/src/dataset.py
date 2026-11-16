@@ -8,9 +8,10 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import torch
+from decent_array import interoperability as iop
 
 from decent_bench.datasets import DatasetHandler
-from decent_bench.utils.types import Dataset
+from decent_bench.utils.types import Datapoint, Dataset
 
 SplitName = Literal["train", "test"]
 ImageLayout = Literal["flat", "cnn"]
@@ -229,10 +230,7 @@ class FEMNISTDatasetHandler(DatasetHandler):
 
     def _build_writer_partition(self, writer_id: str) -> Dataset:
         writer_rows = self._split_rows_for_writer(writer_id)
-        return cast(
-            "Dataset",
-            [self._row_to_datapoint(int(row_index)) for row_index in writer_rows["row_index"].to_list()],
-        )
+        return [self._row_to_datapoint(int(row_index)) for row_index in writer_rows["row_index"].to_list()]
 
     def _split_rows_for_writer(self, writer_id: str) -> pd.DataFrame:
         writer_rows = self.metadata[
@@ -244,9 +242,9 @@ class FEMNISTDatasetHandler(DatasetHandler):
 
         return writer_rows
 
-    def _row_to_datapoint(self, row_index: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def _row_to_datapoint(self, row_index: int) -> Datapoint:
         row = self.hf_dataset[row_index]
         image = image_to_tensor(row["image"], layout=self.image_layout)
         character = cast("int | str", row["character"])
         label = torch.tensor(int(character), dtype=torch.long)
-        return image, label
+        return iop.asarray(image), iop.asarray(label)

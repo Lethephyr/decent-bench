@@ -83,9 +83,8 @@ def _predict(agent: AgentMetricsView, iteration: int, problem: "BenchmarkProblem
 ###### regression and classification metrics
 @lru_cache(maxsize=CACHE_MAX_SIZE)
 def _test_targets(problem: "BenchmarkProblem") -> Array:
-    """Stack wrapped or backend-native test targets."""
-    targets = [y if isinstance(y, Array) else Array(y) for _, y in problem.test_data]  # type: ignore[union-attr]
-    return iop.stack(targets)
+    """Get stacked test targets."""
+    return iop.stack([y for _, y in problem.test_data])  # type: ignore[union-attr]
 
 
 def _mse(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", iteration: int) -> list[float]:
@@ -148,7 +147,7 @@ def _accuracy(agents: Sequence[AgentMetricsView], problem: "BenchmarkProblem", i
             )
             return [np.nan for _ in agents]
 
-        ret.append(float(iop.sum(preds == test_y)) / iop.size(test_y))
+        ret.append(float(iop.mean(preds == test_y)))
 
     return ret
 
@@ -245,9 +244,8 @@ def _requires_integer_targets(problem: "BenchmarkProblem") -> str | None:
 
     int_dtypes = dtypes(kind=("signed integer", "unsigned integer")).values()
     for d in problem.test_data:  # type: ignore[union-attr]
-        target = d[1] if isinstance(d[1], Array) else Array(d[1])
-        if target.dtype not in int_dtypes:
-            return f"requires integer targets, dtype {target.dtype} found"
+        if d[1].dtype not in int_dtypes:
+            return f"requires integer targets, dtype {d[1].dtype} found"
     return None
 
 

@@ -102,8 +102,8 @@ def visualize_nim_dataset(
     rng = random.Random(iop.get_seed())
     for i, partition_data in enumerate(nim_data.get_partitions()):
         p_data = rng.sample(partition_data, min(num_samples_per_partition, len(partition_data)))
-        features = np.array([item[0] for item in p_data]) * nim_data._feature_norm  # noqa: SLF001
-        labels = np.array([item[1] for item in p_data])
+        features = iop.to_numpy(iop.stack([item[0] for item in p_data])) * nim_data._feature_norm  # noqa: SLF001
+        labels = iop.to_numpy(iop.stack([item[1] for item in p_data]))
 
         # Plot points with different markers based on label
         for label_value in np.unique(labels):

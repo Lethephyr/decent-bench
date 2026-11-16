@@ -1,7 +1,6 @@
 import random
 from collections import Counter
 from collections.abc import Sequence
-from typing import cast
 
 import numpy as np
 import torch
@@ -333,6 +332,8 @@ class NIMDatasetHandler(DatasetHandler):
             features, labels = zip(*partition, strict=True)
             feature_tensors = (torch.tensor(features, dtype=torch.float32) / self._feature_norm).unbind(0)
             target_tensors = torch.tensor(labels, dtype=torch.float32).unsqueeze(1).unbind(0)
-            transformed_partition = list(zip(feature_tensors, target_tensors, strict=True))
-            transformed_partitions.append(cast("Dataset", transformed_partition))
+            transformed_partition = [
+                (iop.asarray(f), iop.asarray(t)) for f, t in zip(feature_tensors, target_tensors, strict=True)
+            ]
+            transformed_partitions.append(transformed_partition)
         return transformed_partitions

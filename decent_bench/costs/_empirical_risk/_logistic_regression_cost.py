@@ -154,7 +154,8 @@ class LogisticRegressionCost(EmpiricalRiskCost):
         """
         logits = iop.stack(data) @ x
         sig = _sigmoid(logits)
-        return iop.where(sig >= 0.5, self._label_mapping[1], self._label_mapping[0])
+        preds = iop.where(sig >= 0.5, self._label_mapping[1], self._label_mapping[0])
+        return iop.expand_dims(iop.astype(preds, self._dataset[0][1].dtype), axis=1)
 
     def function(self, x: Array, indices: EmpiricalRiskIndices = "batch", **kwargs: Any) -> float:  # noqa: ARG002, ANN401
         r"""
@@ -309,7 +310,7 @@ class LogisticRegressionCost(EmpiricalRiskCost):
                 targets = iop.stack([y for _, y in self._dataset])
 
                 targets = iop.squeeze(targets, axis=1)
-                self.b = iop.where(targets == self._label_mapping[0], 0, 1)
+                self.b = iop.astype(iop.where(targets == self._label_mapping[0], 0, 1), self.A.dtype)
 
             return self.A, self.b
 
@@ -317,6 +318,6 @@ class LogisticRegressionCost(EmpiricalRiskCost):
         targets = iop.stack([self._dataset[idx][1] for idx in indices])
 
         targets = iop.squeeze(targets, axis=1)
-        b = iop.where(targets == self._label_mapping[0], 0, 1)
+        b = iop.astype(iop.where(targets == self._label_mapping[0], 0, 1), A.dtype)
 
         return A, b

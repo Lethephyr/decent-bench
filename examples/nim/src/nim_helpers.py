@@ -70,7 +70,7 @@ def create_heatmap_plots(
     ys = np.arange(height) / feature_norm
     grid_x, grid_y = np.meshgrid(xs, ys, indexing="xy")
     points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
-    inputs = list(torch.tensor(points, dtype=torch.float32).unbind())
+    inputs = [iop.asarray(point) for point in torch.tensor(points, dtype=torch.float32).unbind()]
 
     if save_path is not None:
         save_path.mkdir(parents=True, exist_ok=True)
@@ -83,7 +83,7 @@ def create_heatmap_plots(
             original_activation = agent.cost.final_activation
             agent.cost.final_activation = nn.Sigmoid()
             try:
-                predictions = agent.cost.predict(agent.x, inputs)  # type: ignore[arg-type]
+                predictions = agent.cost.predict(agent.x, inputs)
             finally:
                 agent.cost.final_activation = original_activation
             heatmaps.append(iop.to_numpy(predictions).reshape((height, width)))

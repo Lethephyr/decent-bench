@@ -152,7 +152,7 @@ class LinearRegressionCost(EmpiricalRiskCost):
 
         """
         pred_data = iop.stack(data)
-        return pred_data @ x
+        return iop.expand_dims(pred_data @ x, axis=1)
 
     def function(self, x: Array, indices: EmpiricalRiskIndices = "batch", **kwargs: Any) -> float:  # noqa: ARG002, ANN401
         r"""
