@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from decent_bench.costs import PyTorchCost
+from decent_array import interoperability as iop
 from decent_array.types import Devices, Frameworks
 
 torch = pytest.importorskip("torch")
@@ -42,7 +43,7 @@ def _make_dataset(n_samples: int = 19, input_size: int = 4, n_classes: int = 3):
     gen.manual_seed(11)
     x = torch.randn((n_samples, input_size), generator=gen, dtype=torch.float32)
     y = torch.randint(0, n_classes, (n_samples,), generator=gen, dtype=torch.long)
-    return [(x[i], y[i]) for i in range(n_samples)]
+    return [(iop.asarray(x[i]), iop.asarray(y[i])) for i in range(n_samples)]
 
 
 def _make_cost(

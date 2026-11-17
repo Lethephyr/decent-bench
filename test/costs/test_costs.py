@@ -164,8 +164,8 @@ def test_zero_cost_validates_shape_and_penalty() -> None:
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch not available")
 def _make_pytorch_cost() -> PyTorchCost:
     dataset = [
-        (torch.tensor([1.0, 0.0], dtype=torch.float32), torch.tensor([1.0], dtype=torch.float32)),
-        (torch.tensor([0.0, 1.0], dtype=torch.float32), torch.tensor([-1.0], dtype=torch.float32)),
+        (iop.asarray(torch.tensor([1.0, 0.0])), iop.asarray(torch.tensor([1.0]))),
+        (iop.asarray(torch.tensor([0.0, 1.0])), iop.asarray(torch.tensor([-1.0]))),
     ]
     model = torch.nn.Linear(2, 1, bias=False)
     return PyTorchCost(
@@ -187,8 +187,8 @@ def test_pytorch_cost_function_and_gradient_match_direct_torch_computation() -> 
     expected_model = torch.nn.Linear(2, 1, bias=False)
     with torch.no_grad():
         expected_model.weight.copy_(x.reshape(1, -1))
-    inputs = torch.stack([sample_x for sample_x, _ in cost.dataset])
-    targets = torch.stack([sample_y for _, sample_y in cost.dataset])
+    inputs = torch.stack([sample_x.value for sample_x, _ in cost.dataset])
+    targets = torch.stack([sample_y.value for _, sample_y in cost.dataset])
     loss = torch.nn.MSELoss()(expected_model(inputs), targets)
     loss.backward()
     expected_gradient = expected_model.weight.grad.flatten()

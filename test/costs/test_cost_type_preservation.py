@@ -172,9 +172,9 @@ def test_incompatible_empirical_compositions_fall_back_to_sum_cost(
 def test_pytorch_cost_composes_with_configured_regularizer() -> None:
     torch = pytest.importorskip("torch")
     dataset = [
-        (torch.tensor([1.0, 0.0]), torch.tensor([1.0])),
-        (torch.tensor([0.0, 1.0]), torch.tensor([-1.0])),
-        (torch.tensor([1.0, 1.0]), torch.tensor([0.5])),
+        (iop.asarray(torch.tensor([1.0, 0.0])), iop.asarray(torch.tensor([1.0]))),
+        (iop.asarray(torch.tensor([0.0, 1.0])), iop.asarray(torch.tensor([-1.0]))),
+        (iop.asarray(torch.tensor([1.0, 1.0])), iop.asarray(torch.tensor([0.5]))),
     ]
     cost = PyTorchCost(
         dataset=dataset,

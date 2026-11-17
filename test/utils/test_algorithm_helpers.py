@@ -177,8 +177,8 @@ def test_pytorch_initialization_extracts_flattened_model_parameters() -> None:
     torch = pytest.importorskip("torch")
 
     dataset = [
-        (torch.tensor([1.0, 2.0]), torch.tensor([1.0])),
-        (torch.tensor([2.0, 3.0]), torch.tensor([2.0])),
+        (iop.asarray(torch.tensor([1.0, 2.0])), iop.asarray(torch.tensor([1.0]))),
+        (iop.asarray(torch.tensor([2.0, 3.0])), iop.asarray(torch.tensor([2.0]))),
     ]
     model = SimpleLinearModel(input_size=2, hidden_sizes=[3], output_size=1)
     cost = PyTorchCost(dataset=dataset, model=model, loss_fn=torch.nn.MSELoss())

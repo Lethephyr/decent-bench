@@ -38,10 +38,6 @@ _PYTORCH_DEVICES = {
 }
 
 
-def _unwrap_tensor(val: Array | torch.Tensor) -> torch.Tensor:
-    return torch.as_tensor(val.value if isinstance(val, Array) else val)
-
-
 class _IndexDataset:
     """A simple dataset wrapper to handle indexing when using a PyTorch dataloader."""
 
@@ -55,8 +51,9 @@ class _IndexDataset:
         return len(self.dataset)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, int]:
+        # Unwrap Array -> torch.Tensor so the default DataLoader collate can batch them.
         x, y = self.dataset[idx]
-        return _unwrap_tensor(x), _unwrap_tensor(y), idx
+        return x.value, y.value, idx
 
 
 @tags(Tag.COST, Tag.REGRESSION, Tag.CLASSIFICATION, Tag.EMPIRICAL_RISK)
@@ -289,19 +286,19 @@ class PyTorchCost(EmpiricalRiskCost):
         return torch.cat(params).to(self._pytorch_device)
 
     @autodecorate_cost_method(EmpiricalRiskCost.predict)
-    def predict(self, x: torch.Tensor, data: list[Array] | list[torch.Tensor]) -> torch.Tensor:
+    def predict(self, x: torch.Tensor, data: list[Array]) -> torch.Tensor:
         """
         Make predictions at x on the given data.
 
         Args:
             x: Point to make predictions at.
-            data: List of Array or torch.Tensor containing features to make predictions on.
+            data: List of Array containing features to make predictions on.
 
         Returns:
             Predicted targets as an array
 
         Raises:
-            TypeError: If data is not a list of Array or torch.Tensor.
+            TypeError: If data is not a list of Array.
 
         """
         self._set_model_parameters(x)
@@ -310,8 +307,8 @@ class PyTorchCost(EmpiricalRiskCost):
 
         with torch.no_grad():
             if not isinstance(data, list):
-                raise TypeError(f"Data must be a list of Array or torch.Tensor {type(data)}.")
-            inputs = torch.stack([_unwrap_tensor(d) for d in data])
+                raise TypeError(f"Data must be a list of Array {type(data)}.")
+            inputs = torch.stack([d.value for d in data])
 
             final_outputs: list[torch.Tensor] = []
             for i in range(0, inputs.shape[0], self._max_batch_size):
