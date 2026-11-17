@@ -103,9 +103,9 @@ class PyTorchCost(EmpiricalRiskCost):
 
         Args:
             dataset (Dataset):
-                Dataset partition containing features and targets.
-                Transformations should be applied beforehand such as converting to tensors.
-                See torch.utils.data.Dataset for details.
+                Dataset partition of ``(features, targets)`` pairs of :class:`~decent_array.Array`, e.g. from
+                :class:`~decent_bench.datasets.PyTorchDatasetHandler` or wrapped with ``iop.asarray``.
+                Raw ``torch.Tensor`` pairs or a ``torch.utils.data.Dataset`` are not accepted directly.
             model (torch.nn.Module): PyTorch neural network model.
             loss_fn: (torch.nn.Module): PyTorch loss function.
             final_activation (torch.nn.Module | None): Optional final activation layer to apply after
